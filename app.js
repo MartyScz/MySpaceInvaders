@@ -75,6 +75,56 @@ class Player {
     }
 }
 
+//Creation des Aliens
+class ALien {
+    constructor({position}) {
+        this.velocity = {x0, y:0}
+        const image = new Image()
+        image.src = './Images/greenAlien.png'
+        image.onload = () => {
+            this.image = image
+            this.width = 32
+            this.height = 32
+            this.position = {
+                x:position.x,
+                y:position.y
+            }
+        }
+    }
+
+    draw() {
+        if (this.image) {
+            context.drawImage(this.image,this.position.x,this.position.y,this.width,this.height)
+        }
+    }
+
+    update({velocity}) {
+        if (this.image) {
+            this.position.x += velocity.x
+            this.position.y += velocity.y
+            if (this.position.y + this.height >= world.height) {
+                console.log('You Loose')
+            }
+        }
+        this.draw()
+    }
+    // Missiles que les aliens tirent
+    shoot(alienMissiles) {
+        if (this.position) {
+            alienMissiles.push(new alienMissile ({
+                    position: {
+                    x:this.position.x,
+                    y:this.position.y
+                },
+                velocity: {
+                    x: 0,
+                    y: 3
+                }
+            }))
+        }
+    }
+}
+
 class Missile {
     constructor({position}) {
         this.position = position
@@ -89,6 +139,37 @@ class Missile {
     update() {
         this.position.y += this.velocity.y
         this.draw()
+    }
+}
+
+class Grid {
+    constructor() {
+        this.position = {x: 0, y: 0}
+        this.velocity = {x: 0.5, y: 0}
+        this.invaders = [ ]
+        let rows = Math.floor((world.height/34)*(1/3))
+        const columns = Math.floor((world.width/34)*(2/3))
+        this.height = rows*34
+        this.width = columns*34
+        for (let x = 0; x < columns; x++){
+            for (let y = 0; y < rows; y ++) {
+                this.invaders.push(new ALien({
+                    position: {
+                        x: x * 34,
+                        y: y * 34
+                    }
+                }))
+            }
+        }
+    }
+    update() {
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+        this.velocity.y = 0
+        if(this.position.x + this.width >= world.width || this.position.x == 0) {
+            this.velocity.x = - this.velocity.x
+            this.velocity.y = 32
+        }
     }
 }
 
