@@ -1,4 +1,3 @@
-
 const world = document.querySelector('#gameBoard')
 const context = world.getContext('2d')
 
@@ -11,12 +10,13 @@ const missiles = []
 const keys = {
     ArrowLeft: { pressed:false},
     ArrowRight: { pressed:false},
+    fired: {pressed:false }
 }
 
 class Player {
     constructor(){
-        this.width = 32 //Largeur du player
-        this.height = 32 // Hauteur du player
+        // this.width = 32 //Largeur du player
+        // this.height = 32 // Hauteur du player
         this.velocity = {
             x:0, // Vitesse de déplacement sur l'axe des x
             y:0,  // Vitesse de déplacement sur l'axe des y 
@@ -103,7 +103,6 @@ class Alien {
             this.position.x += velocity.x
             this.position.y += velocity.y
             if (this.position.y + this.height >= world.height) {
-                console.log('You Loose')
             }
         }
         this.draw()
@@ -133,8 +132,11 @@ class Missile {
         this.height = 10
     }
     draw() {
+        context.save()
         context.fillStyle = 'red'
         context.fillRect(this.position.x,this.position.y,this.width,this.height)
+        context.fill()
+        context.restore()
     }
     update() {
         this.position.y += this.velocity.y
@@ -172,31 +174,78 @@ class Grid {
         }
     }
 }
+// Animation explosion
+class Particule {
+    constructor({position,velocity,radius,color}) {
+        this.position = position
+        this.velocity = velocity
+        this.radius = radius
+        this.color = color
+        this.opacity = 1
+    }
+    draw(){
+        context.save()
+        context.globalAlpha = this.opacity
+        context.beginPath()
+        context.fillStyle = this.color
+        context.arc(this.position.x,this.position.y, this.radius,0,Math.PI *2)
+        context.fill()
+        context.closePath()
+        context.restore()
+    }
+    update(){
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+        if(this.opacity > 0) {
+            this.opacity -= 0.01
+        }
+        this.draw()
+    }
+}
 
 class alienMissile {
     constructor({position,velocity}) {
         this.position = position
         this.velocity = velocity
-        this.width = 5
+        this.width = 3
         this.height = 10
     }
     draw() {
+        context.save()
         context.fillStyle='yellow'
         context.fillRect(this.position.x,this.position.y,this.width,this.height)
         context.fill()
+        context.restore()
     }
     update() {
+        this.draw()
         this.position.x += this.velocity.x
         this.position.y += this.velocity.y
-        this.draw()
     }
 }
 
-const missile = []
-const alienMissiles = []
-let grids = [new Grid()]
-const player = new Player()
-let particules = []
+let missile
+let alienMissiles
+let grids
+let player
+let particules
+let lifes
+
+
+const init =()=> {
+    missile = []
+    alienMissiles = []
+    grids = [new Grid()]
+    player = new Player()
+    particules = []
+    lifes = 3
+    keys.ArrowLeft.pressed = false
+    keys.ArrowRight.pressed = false
+    keys.fired.pressed = false
+
+}
+
+init();
 
 // Boucle d'animation
 
@@ -218,8 +267,36 @@ const animationLoop = () => {
                     grid.invaders[Math.floor(Math.random()*(grid.invaders.length))].shoot(alienMissiles)
                         console.log(alienMissiles)
                 }
-                grid.invaders.forEach((invader) => {
+                grid.invaders.forEach((invader,indexI) => {
                     invader.update({velocity:grid.velocity})
+                    missiles.forEach((missile,indexM) => {
+                        if(missile.position.y <= invader.position.y + invader.height &&
+                            missile.position.y >= invader.position.y &&
+                            missile.position.x + missile.width >= invader.position.x &&
+                            missile.position.x - missile.width <= invader.position.x + invader.width) {
+                                for(let i= 0; i <12; i++){
+                                    particules.push(new Particule({
+                                        position:{
+                                            x:invader.position.x + invader.width/2,
+                                            y:invader.position.y + invader.height/2
+                                        },
+                                        velocity:{x:(Math.random()-0.5)*2,y:(Math.random()-0.5)*2},
+                                        radius:Math.random()*5+1,
+                                        color:'red'
+                                    }))
+                                }
+                            setTimeout(() => {
+                                grid.invaders.splice(indexI,1)
+
+                                missiles.splice(indexM,1)
+                                if(grid.invaders.length === 0 && grids.length ==1){
+                                    grids.splice(indexGrid,1)
+                                    grids.push(new Grid())
+                                }
+                            },0)
+                            }
+
+                    })
                 })
             })
             alienMissiles.forEach((alienMissile,index) => {
@@ -228,23 +305,54 @@ const animationLoop = () => {
                         alienMissiles.splice(index,1)}, 0)
                 }
                 else {alienMissile.update();}
+                if(alienMissile.position.y + alienMissile.height >= player.position.y &&
+                    alienMissile.position.y <= player.position.y + player.height &&
+                    alienMissile.position.x >= player.position.x &&
+                    alienMissile.position.x + alienMissile.width <= player.position.x + player.width) {
+                    alienMissiles.splice(index,1)
+                    for(let i = 0; i <22; i++){
+                        particules.push(new Particule({
+                            position: {
+                                x:player.position.x + player.width/2,
+                                y:player.position.y + player.height/2
+                            },
+                            velocity:{x:(Math.random()-0.5)*2,y:(Math.random()-0.5)*2},
+                            radius:Math.random()*5,
+                            color:'white'
+                        }))
+                    }
+                        lostLife()
+                    }
+            })
+
+            particules.forEach((particule,index) => {
+                if(particule.opacity <= 0) {
+                    particules.splice(index,1)
+                } else {
+                    particule.update()
+                }
             })
     frames++
     
 }
 animationLoop()
 
+const lostLife = ()=> {
+    lifes--
+    if(lifes <= 0){
+        alert('Loose')
+        init()
+    }
+}
 
 addEventListener("keydown",({key}) => {
 
     switch(key){
         case 'ArrowLeft':
             keys.ArrowLeft.pressed = true
-            console.log('gauche')
             break
         case 'ArrowRight':
             keys.ArrowRight.pressed = true
-            console.log('droite')
             break
     }
 })
@@ -253,11 +361,9 @@ addEventListener("keyup",({key}) => {
     switch(key){
         case 'ArrowLeft':
             keys.ArrowLeft.pressed = false
-            console.log('gauche')
             break
             case 'ArrowRight':
                 keys.ArrowRight.pressed = false
-                console.log('droite')
             break
         case ' ':
             player.shoot()
