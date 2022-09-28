@@ -76,9 +76,9 @@ class Player {
 }
 
 //Creation des Aliens
-class ALien {
+class Alien {
     constructor({position}) {
-        this.velocity = {x0, y:0}
+        this.velocity = {x:0, y:0}
         const image = new Image()
         image.src = './Images/greenAlien.png'
         image.onload = () => {
@@ -141,7 +141,7 @@ class Missile {
         this.draw()
     }
 }
-
+// Position et vitesse des aliens
 class Grid {
     constructor() {
         this.position = {x: 0, y: 0}
@@ -153,7 +153,7 @@ class Grid {
         this.width = columns*34
         for (let x = 0; x < columns; x++){
             for (let y = 0; y < rows; y ++) {
-                this.invaders.push(new ALien({
+                this.invaders.push(new Alien({
                     position: {
                         x: x * 34,
                         y: y * 34
@@ -168,26 +168,66 @@ class Grid {
         this.velocity.y = 0
         if(this.position.x + this.width >= world.width || this.position.x == 0) {
             this.velocity.x = - this.velocity.x
-            this.velocity.y = 32
+            this.velocity.y = 34
         }
     }
 }
 
-const player = new Player()
+class alienMissile {
+    constructor({position,velocity}) {
+        this.position = position
+        this.velocity = velocity
+        this.width = 5
+        this.height = 10
+    }
+    draw() {
+        context.fillStyle='yellow'
+        context.fillRect(this.position.x,this.position.y,this.width,this.height)
+        context.fill()
+    }
+    update() {
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+        this.draw()
+    }
+}
 
+const missile = []
+const alienMissiles = []
+let grids = [new Grid()]
+const player = new Player()
+let particules = []
 
 // Boucle d'animation
 
 const animationLoop = () => {
-    requestAnimationFrame(animationLoop)
     context.clearRect(0,0,world.width,world.height)
     player.update()
+    requestAnimationFrame(animationLoop)
+
     missiles.forEach((missile,index) => {
         if(missile.position.y + missile.height <= 0) {
             setTimeout(() => {
                 missiles.splice(index,1)}
                 ,0)}
         else{missile.update()}
+            })
+            grids.forEach((grid,indexGrid) => {
+                grid.update()
+                if(frames %50 === 0 && grid.invaders.length >0) { // Vitesse des tires des aliens
+                    grid.invaders[Math.floor(Math.random()*(grid.invaders.length))].shoot(alienMissiles)
+                        console.log(alienMissiles)
+                }
+                grid.invaders.forEach((invader) => {
+                    invader.update({velocity:grid.velocity})
+                })
+            })
+            alienMissiles.forEach((alienMissile,index) => {
+                if(alienMissile.position.y + alienMissile.height >= world.height){
+                    setTimeout(() => {
+                        alienMissiles.splice(index,1)}, 0)
+                }
+                else {alienMissile.update();}
             })
     frames++
     
